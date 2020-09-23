@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bufio"
 	"errors"
 	"flag"
 	"fmt"
@@ -49,16 +50,19 @@ func streamFromFile(path string) {
 	fmt.Printf("Successfully opened %s\n", file.Name())
 
 	buffer := make([]byte, 20)
-	reader := io.Reader(file)
-	numRead, err := reader(buffer)
+	reader := bufio.NewReader(file)
 	for {
+		numRead, err := reader.Read(buffer)
 		if err != nil {
-			fmt.Errorf("Error: %w\n", err)
+			if !errors.Is(err, io.EOF) {
+				fmt.Printf("Fatal error occured: %s\n", err)
+			}
 			break
 		}
 
-		fmt.Printf("[+] %s", string(buffer[:numRead]))
+		fmt.Printf("%s\n-----------------------------------------\n", string(buffer[:numRead]))
 	}
+	fmt.Println()
 
 }
 
