@@ -19,12 +19,12 @@ type ReaderConfig struct {
 }
 
 func streamFromString(source string, useDigitReader bool) {
-	var reader io.Reader
+	var reader io.Reader = strings.NewReader(source)
+
 	if useDigitReader {
-		reader = readers.NewDigitReader(source)
-	} else {
-		reader = strings.NewReader(source)
+		reader = readers.NewDigitReader(reader)
 	}
+	
 	buffer := make([]byte, 10)
 	for {
 		numRead, err := reader.Read(buffer)

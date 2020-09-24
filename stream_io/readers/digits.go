@@ -4,15 +4,25 @@ import (
 	"io"
 )
 
-// DigitReader
-type DigitReader struct {
+// DigitReaderRaw accepts a string as its source
+type DigitReaderRaw struct {
 	src string
 	cur int
 }
 
-// NewDigitReader returns a pointer to a DigitReader
-func NewDigitReader(src string) *DigitReader {
-	return &DigitReader{src: src}
+// DigitReader accepts an io.Reader
+type DigitReader struct {
+	reader io.Reader
+}
+
+// NewDigitReaderFromSource returns a pointer to a DigitReader
+func NewDigitReaderFromSource(src string) *DigitReaderRaw {
+	return &DigitReaderRaw{src: src}
+}
+
+// NewDigitReader returns a pointer to a DigitReader wrapping an io.Reader
+func NewDigitReader(reader io.Reader) *DigitReader {
+	return &DigitReader{reader: reader}
 }
 
 func isDigit(r byte) bool {
@@ -20,28 +30,17 @@ func isDigit(r byte) bool {
 }
 
 func (r *DigitReader) Read(p []byte) (int, error) {
-	if r.cur >= len(r.src) {
-		return 0, io.EOF
+	numRead, err := r.reader.Read(p)
+	if err != nil {
+		return numRead, err
 	}
-
-	availToRead := len(r.src) - r.cur
-	numRead, bound := 0, 0
-	if availToRead >= len(p) {
-		// buffer cannot hold all data, only read up to length of buffer into buffer
-		bound = len(p)
-	} else if availToRead <= len(p) {
-		// buffer can hold everything we have left to read
-		bound = availToRead
-	}
-
-	buffer := make([]byte, bound)
-	for numRead < bound {
-		if digit := r.src[r.cur]; isDigit(digit) {
-			buffer[numRead] = digit
+	buffer := make([]byte, numRead)
+	for i := 0; i < numRead; i++ {
+		if digit := p[i]; isDigit(digit) {
+			buffer[i] = digit
 		}
-		numRead++
-		r.cur++
 	}
+
 
 	copy(p, buffer)
 	return numRead, nil
