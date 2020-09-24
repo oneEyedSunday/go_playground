@@ -7,6 +7,7 @@ import (
 	"flag"
 	"fmt"
 	"io"
+	"oneeyedsunday/streamio/readers"
 	"os"
 	"strings"
 )
@@ -17,8 +18,13 @@ type ReaderConfig struct {
 	splitFunc  bufio.SplitFunc
 }
 
-func streamFromString(source string) {
-	reader := strings.NewReader(source)
+func streamFromString(source string, useDigitReader bool) {
+	var reader io.Reader
+	if useDigitReader {
+		reader = readers.NewDigitReader(source)
+	} else {
+		reader = strings.NewReader(source)
+	}
 	buffer := make([]byte, 10)
 	for {
 		numRead, err := reader.Read(buffer)
@@ -117,6 +123,7 @@ func streamFromFileWithSplit(path string, cfg ReaderConfig) {
 
 func main() {
 	sourceString := flag.String("string_source", "", "Stream from string")
+	useDigitReader := flag.Bool("digit", false, "Use Custom Digit Reader")
 	filePath := flag.String("file_source", "", "Stream from file source")
 	asBinary := flag.Bool("bin", false, "Read as Binary")
 	lineByLine := flag.Bool("line", false, "Read line by line")
@@ -125,7 +132,7 @@ func main() {
 
 	switch {
 	case *sourceString != "":
-		streamFromString(*sourceString)
+		streamFromString(*sourceString, *useDigitReader)
 	case *filePath != "" && *wordByWord:
 		streamFromFileWithSplit(*filePath, ReaderConfig{successMsg: "Successfully opened %s to read word by word\n", splitFunc: bufio.ScanWords})
 	case *filePath != "" && *lineByLine:
