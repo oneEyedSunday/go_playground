@@ -1,6 +1,7 @@
 This aims to walkthrough streaming data in Go.
-Resource [here](https://medium.com/learning-the-go-programming-language/streaming-io-in-go-d93507931185)
-
+Resources:
+-  [Learning Go](https://medium.com/learning-the-go-programming-language/streaming-io-in-go-d93507931185)
+-  [Zetcode] (zetcode.com/golang/readfile/)
 
 Read from string buffer
 ```sh

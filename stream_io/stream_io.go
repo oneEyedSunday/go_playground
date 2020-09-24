@@ -2,6 +2,7 @@ package main
 
 import (
 	"bufio"
+	"encoding/hex"
 	"errors"
 	"flag"
 	"fmt"
@@ -47,7 +48,7 @@ func handleFileOpenError(err error) {
 	fmt.Println(fmt.Errorf("A non os error occured: %w\n", err))
 }
 
-func streamFromFile(path string) {
+func streamFromFile(path string, asBinary bool) {
 	file, err := os.Open(path)
 	if err != nil {
 		handleFileOpenError(err)
@@ -56,9 +57,18 @@ func streamFromFile(path string) {
 
 	defer file.Close()
 
-	fmt.Printf("Successfully opened %s\n", file.Name())
+	successMsg := "Successfully opened %s"
+	var buffer []byte = make([]byte, 20)
 
-	buffer := make([]byte, 20)
+	if asBinary {
+		successMsg += "; reading as Binary"
+		buffer = make([]byte, 256)
+	}
+
+	successMsg += "\n"
+
+	fmt.Printf(successMsg, file.Name())
+
 	reader := bufio.NewReader(file)
 	for {
 		numRead, err := reader.Read(buffer)
@@ -69,7 +79,11 @@ func streamFromFile(path string) {
 			break
 		}
 
-		fmt.Printf("%s\n-----------------------------------------\n", string(buffer[:numRead]))
+		if asBinary {
+			fmt.Printf("[+]%s", hex.Dump(buffer[:numRead]))
+		} else {
+			fmt.Printf("%s\n-----------------------------------------\n", string(buffer[:numRead]))
+		}
 	}
 	fmt.Println()
 
@@ -104,6 +118,7 @@ func streamFromFileWithSplit(path string, cfg ReaderConfig) {
 func main() {
 	sourceString := flag.String("string_source", "", "Stream from string")
 	filePath := flag.String("file_source", "", "Stream from file source")
+	asBinary := flag.Bool("bin", false, "Read as Binary")
 	lineByLine := flag.Bool("line", false, "Read line by line")
 	wordByWord := flag.Bool("word", false, "Read word by word")
 	flag.Parse()
@@ -111,15 +126,15 @@ func main() {
 	switch {
 	case *sourceString != "":
 		streamFromString(*sourceString)
-		// fallthrough
 	case *filePath != "" && *wordByWord:
 		streamFromFileWithSplit(*filePath, ReaderConfig{successMsg: "Successfully opened %s to read word by word\n", splitFunc: bufio.ScanWords})
 	case *filePath != "" && *lineByLine:
 		streamFromFileWithSplit(*filePath, ReaderConfig{successMsg: "Successfully opened %s to read line by line\n", splitFunc: bufio.ScanLines})
 	case *filePath != "":
-		streamFromFile(*filePath)
+		streamFromFile(*filePath, *asBinary)
 	default:
-		fmt.Println("No valid selection made.")
+		fmt.Printf("No valid selection made. Run %s -help\n", os.Args[0])
+		os.Exit(1)
 	}
 
 	fmt.Println("Walthrough over.")
