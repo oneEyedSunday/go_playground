@@ -27,6 +27,16 @@ func streamFromString(source string) {
 	}
 }
 
+func handleFileOpenError(err error) {
+	var pErr *os.PathError
+	if errors.As(err, &pErr) {
+		fmt.Println(fmt.Errorf("Error opening %v %v\n", pErr.Path, pErr.Err))
+		return
+	}
+	fmt.Println(fmt.Errorf("A non os error occured: %w\n", err))
+	return
+}
+
 func streamFromFile(path string) {
 	file, err := os.Open(path)
 	if err != nil {
@@ -35,13 +45,7 @@ func streamFromFile(path string) {
 			// fmt.Println(fmt.Errorf("Error opening path: %v %v\n", path, err))
 			return
 		}*/
-		var pErr *os.PathError
-		if errors.As(err, &pErr) {
-			fmt.Println(fmt.Errorf("Error opening %v %v\n", pErr.Path, pErr.Err))
-			return
-		}
-
-		fmt.Println(fmt.Errorf("Another Error %w", err))
+		handleFileOpenError(err)
 		return
 	}
 
@@ -66,15 +70,41 @@ func streamFromFile(path string) {
 
 }
 
+func streamLineByLineFromFile(path string) {
+	file, err := os.Open(path)
+
+	if err != nil {
+		handleFileOpenError(err)
+		return
+	}
+
+	defer file.Close()
+
+	fmt.Printf("Successfully opened %s to read line by line\n", path)
+
+	scanner := bufio.NewScanner(file)
+
+	for scanner.Scan() {
+		fmt.Printf("[+]\t%s\n", scanner.Text())
+	}
+
+	if err := scanner.Err(); err != nil {
+		fmt.Println("[-] Error reading: ", err)
+	}
+}
+
 func main() {
 	sourceString := flag.String("string_source", "", "Stream from string")
 	filePath := flag.String("file_source", "", "Stream from file source")
+	lineByLine := flag.Bool("line", false, "Read line by line")
 	flag.Parse()
 
 	switch {
 	case *sourceString != "":
 		streamFromString(*sourceString)
 		// fallthrough
+	case *filePath != "" && *lineByLine:
+		streamLineByLineFromFile(*filePath)
 	case *filePath != "":
 		streamFromFile(*filePath)
 	default:
