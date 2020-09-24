@@ -10,6 +10,12 @@ import (
 	"strings"
 )
 
+// ReaderConfig is configuration for my reader
+type ReaderConfig struct {
+	successMsg string
+	splitFunc  bufio.SplitFunc
+}
+
 func streamFromString(source string) {
 	reader := strings.NewReader(source)
 	buffer := make([]byte, 10)
@@ -28,23 +34,22 @@ func streamFromString(source string) {
 }
 
 func handleFileOpenError(err error) {
+	/*if e, isPError := err.(*os.PathError); isPError {
+		fmt.Printf("Failed to open %v: %v\n", e.Path, e.Err)
+		// fmt.Println(fmt.Errorf("Error opening path: %v %v\n", path, err))
+		return
+	}*/
 	var pErr *os.PathError
 	if errors.As(err, &pErr) {
 		fmt.Println(fmt.Errorf("Error opening %v %v\n", pErr.Path, pErr.Err))
 		return
 	}
 	fmt.Println(fmt.Errorf("A non os error occured: %w\n", err))
-	return
 }
 
 func streamFromFile(path string) {
 	file, err := os.Open(path)
 	if err != nil {
-		/*if e, isPError := err.(*os.PathError); isPError {
-			fmt.Printf("Failed to open %v: %v\n", e.Path, e.Err)
-			// fmt.Println(fmt.Errorf("Error opening path: %v %v\n", path, err))
-			return
-		}*/
 		handleFileOpenError(err)
 		return
 	}
@@ -70,7 +75,7 @@ func streamFromFile(path string) {
 
 }
 
-func streamLineByLineFromFile(path string) {
+func streamFromFileWithSplit(path string, cfg ReaderConfig) {
 	file, err := os.Open(path)
 
 	if err != nil {
@@ -80,9 +85,12 @@ func streamLineByLineFromFile(path string) {
 
 	defer file.Close()
 
-	fmt.Printf("Successfully opened %s to read line by line\n", path)
+	fmt.Printf(cfg.successMsg, path)
 
 	scanner := bufio.NewScanner(file)
+	if cfg.splitFunc != nil {
+		scanner.Split(cfg.splitFunc)
+	}
 
 	for scanner.Scan() {
 		fmt.Printf("[+]\t%s\n", scanner.Text())
@@ -97,14 +105,17 @@ func main() {
 	sourceString := flag.String("string_source", "", "Stream from string")
 	filePath := flag.String("file_source", "", "Stream from file source")
 	lineByLine := flag.Bool("line", false, "Read line by line")
+	wordByWord := flag.Bool("word", false, "Read word by word")
 	flag.Parse()
 
 	switch {
 	case *sourceString != "":
 		streamFromString(*sourceString)
 		// fallthrough
+	case *filePath != "" && *wordByWord:
+		streamFromFileWithSplit(*filePath, ReaderConfig{successMsg: "Successfully opened %s to read word by word\n", splitFunc: bufio.ScanWords})
 	case *filePath != "" && *lineByLine:
-		streamLineByLineFromFile(*filePath)
+		streamFromFileWithSplit(*filePath, ReaderConfig{successMsg: "Successfully opened %s to read line by line\n", splitFunc: bufio.ScanLines})
 	case *filePath != "":
 		streamFromFile(*filePath)
 	default:
