@@ -24,7 +24,7 @@ func streamFromString(source string, useDigitReader bool) {
 	if useDigitReader {
 		reader = readers.NewDigitReader(reader)
 	}
-	
+
 	buffer := make([]byte, 10)
 	for {
 		numRead, err := reader.Read(buffer)
@@ -128,6 +128,7 @@ func main() {
 	asBinary := flag.Bool("bin", false, "Read as Binary")
 	lineByLine := flag.Bool("line", false, "Read line by line")
 	wordByWord := flag.Bool("word", false, "Read word by word")
+	defaultWriter := flag.Bool("defaultWriter", false, "Demo default writer")
 	flag.Parse()
 
 	switch {
@@ -139,6 +140,8 @@ func main() {
 		streamFromFileWithSplit(*filePath, ReaderConfig{successMsg: "Successfully opened %s to read line by line\n", splitFunc: bufio.ScanLines})
 	case *filePath != "":
 		streamFromFile(*filePath, *asBinary)
+	case *defaultWriter:
+		DefaultWriterFunc()
 	default:
 		fmt.Printf("No valid selection made. Run %s -help\n", os.Args[0])
 		os.Exit(1)
