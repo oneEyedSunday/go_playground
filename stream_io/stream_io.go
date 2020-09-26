@@ -18,6 +18,11 @@ type ReaderConfig struct {
 	splitFunc  bufio.SplitFunc
 }
 
+// ChannelWriter writes bytes to a channel
+type ChannelWriter struct {
+	ch chan byte
+}
+
 func streamFromString(source string, useDigitReader bool) {
 	var reader io.Reader = strings.NewReader(source)
 
@@ -121,6 +126,49 @@ func streamFromFileWithSplit(path string, cfg ReaderConfig) {
 	}
 }
 
+// NewCustomWriter does yada yada
+func NewCustomWriter() *ChannelWriter {
+	return &ChannelWriter{make(chan byte, 1024)}
+}
+
+// Chan exposes the byte channel
+func (w *ChannelWriter) Chan() <-chan byte {
+	return w.ch
+}
+
+// Write implements the Writer interface
+func (w *ChannelWriter) Write(p []byte) (int, error) {
+	n := 0
+	for _, b := range p {
+		w.ch <- b
+		n++
+	}
+
+	return n, nil
+}
+
+// Close closes
+func (w *ChannelWriter) Close() error {
+	close(w.ch)
+	return nil
+}
+
+// customWriterFunc runs a writer that writes to a channel
+func customWriterFunc() {
+	writer := NewCustomWriter()
+	go func() {
+		defer writer.Close()
+		writer.Write([]byte("Jaja "))
+		writer.Write([]byte("Moi"))
+	}()
+
+	for c := range writer.Chan() {
+		fmt.Printf("%c", c)
+	}
+
+	fmt.Println()
+}
+
 func main() {
 	sourceString := flag.String("string_source", "", "Stream from string")
 	useDigitReader := flag.Bool("digit", false, "Use Custom Digit Reader")
@@ -129,7 +177,17 @@ func main() {
 	lineByLine := flag.Bool("line", false, "Read line by line")
 	wordByWord := flag.Bool("word", false, "Read word by word")
 	defaultWriter := flag.Bool("defaultWriter", false, "Demo default writer")
+	chanWriter := flag.Bool("chanWriter", false, "Demo Channel Writer")
+	fileIO := flag.Bool("files", false, "Demo Files IO")
+	stdIO := flag.Bool("std", false, "Std IO")
 	flag.Parse()
+
+	proverbs := []string{
+		"Channels orchestrate mutexes serialize\n",
+		"Cgo is not Go\n",
+		"Errors are values\n",
+		"Don't panic\n",
+	}
 
 	switch {
 	case *sourceString != "":
@@ -142,6 +200,46 @@ func main() {
 		streamFromFile(*filePath, *asBinary)
 	case *defaultWriter:
 		DefaultWriterFunc()
+	case *chanWriter:
+		customWriterFunc()
+	case *fileIO:
+		{
+			file, err := os.Create("./proverbs.txt")
+			if err != nil {
+				fmt.Println(err)
+				os.Exit(1)
+			}
+			defer file.Close()
+
+			for _, p := range proverbs {
+				n, err := file.Write([]byte (p))
+				if err != nil {
+					fmt.Println(err)
+					os.Exit(1)
+				}
+
+				if n != len(p) {
+					fmt.Println("failed to write data")
+					os.Exit(1)
+				}
+			}
+
+			fmt.Println("file write done")
+		}
+	case *stdIO:
+		{
+			for _, p := range proverbs {
+				n, err := os.Stdout.Write([]byte(p))
+				if err != nil {
+					fmt.Println(err)
+					os.Exit(1)
+				}
+				if n != len(p) {
+					fmt.Println("failed to write data")
+					os.Exit(1)
+				}
+			}
+		}
 	default:
 		fmt.Printf("No valid selection made. Run %s -help\n", os.Args[0])
 		os.Exit(1)
