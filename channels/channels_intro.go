@@ -6,6 +6,10 @@ import (
 	"time"
 )
 
+type Processor interface {
+	process(chan int)
+}
+
 type Worker struct {
 	id int
 }
@@ -19,6 +23,8 @@ func (w *Worker) process(c chan int) {
 }
 
 func main() {
+	var _ Processor = &Worker{} // because i defined the method on a pointer
+	// var _ Processor = (*Worker)(nil) // interface satisfaction assertion if method defined on value
 	c := make(chan int, 0)
 	// sending c <- 5
 	// receiving x := <- c
@@ -31,9 +37,11 @@ func main() {
 	for {
 		select {
 		case c <- rand.Int():
-			fmt.Printf("<------ \n")
-		default:
-			fmt.Printf("\tDropped\n")
+			// fmt.Printf("<------ \n")
+		case t := <-time.After(time.Millisecond * 700):
+			fmt.Println("Timed out at: ", t)
+			// default:
+			//	fmt.Printf("\tDropped\n")
 		}
 		// c <- rand.Int()
 		// fmt.Printf("Channel length (Buffered) %d capacity is: %d\n", len(c), cap(c))
