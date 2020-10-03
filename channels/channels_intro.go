@@ -19,7 +19,7 @@ func (w *Worker) process(c chan int) {
 }
 
 func main() {
-	c := make(chan int, 10)
+	c := make(chan int, 0)
 	// sending c <- 5
 	// receiving x := <- c
 	// are both blocing
@@ -29,8 +29,14 @@ func main() {
 	}
 
 	for {
-		c <- rand.Int()
-		fmt.Printf("Channel length (Buffered) %d capacity is: %d\n", len(c), cap(c))
+		select {
+		case c <- rand.Int():
+			fmt.Printf("<------ \n")
+		default:
+			fmt.Printf("\tDropped\n")
+		}
+		// c <- rand.Int()
+		// fmt.Printf("Channel length (Buffered) %d capacity is: %d\n", len(c), cap(c))
 		time.Sleep(time.Millisecond * 50) // pause exec so user can more easily see flow
 	}
 }
