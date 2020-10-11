@@ -1,0 +1,4 @@
+FROM scratch
+ADD my-server.app /
+CMD ["/my-server.app"]
+
