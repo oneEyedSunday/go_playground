@@ -16,4 +16,8 @@ Init go module
    go mod github.com/oneeyedsunday/go_playground/grpc-web-go
    go run server.go
 ```
+## Statically Compile Go app for scratch docker image
+```sh
+GO_ENABLED=0 GOOS=darwin go build -a -installsuffix cgo -o my-server.app .
+```
 
