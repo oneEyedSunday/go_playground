@@ -1,10 +1,8 @@
 'use strict';
 
-const tracker = require('./tracker');
+const download = require('./download');
 const parser = require('./parser');
 
 const torrent = parser.open('puppy.torrent');
 
-tracker.getPeers(torrent, peers => {
-    console.log('list of peers: ', peers);
-});
+download(torrent);
