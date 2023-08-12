@@ -5,4 +5,4 @@ const parser = require('./parser');
 
 const torrent = parser.open('puppy.torrent');
 
-download(torrent);
+download(torrent, torrent.info.name);
