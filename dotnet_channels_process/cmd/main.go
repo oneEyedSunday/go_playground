@@ -62,7 +62,7 @@ func pumpData(ctx context.Context, dataProcessor *data.BackgroundDataProcessor) 
 			case <-threeSecondsInterval.C:
 				go dataProcessor.Push(data.DataWithKey{Key: "alice", Data: "wonderland"})
 			case <-twoSecondsInterval.C:
-				dataProcessor.Push(data.DataWithKey{Key: "keith", Data: "peele"})
+				go dataProcessor.Push(data.DataWithKey{Key: "keith", Data: "peele"})
 			}
 		}
 	}()
@@ -70,11 +70,8 @@ func pumpData(ctx context.Context, dataProcessor *data.BackgroundDataProcessor) 
 }
 
 func main() {
-	// wire this up to look like the background stuff
-	// eventually use a cmd/background run
-
-	f := time.Now()
-	defer measureExecutionTime(f)
+	startT := time.Now()
+	defer measureExecutionTime(startT)
 
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*time.Duration(6))
 

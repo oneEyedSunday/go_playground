@@ -7,7 +7,11 @@ import (
 
 type KeySpecificDataProcessor struct {
 	processorKey string
-	c            chan DataWithKey
+	// c holds data to be worked on
+	c chan DataWithKey
+	// abortC is a cancel function that is used internally to signal to the work functions to abort processing
+	// abortC blends both the context of CreateAndStart with a cancel function that is run on `StopProcessing`
+	abortC context.CancelFunc
 }
 
 func (p *KeySpecificDataProcessor) GetProcessorKey() string {
@@ -32,16 +36,21 @@ func (p *KeySpecificDataProcessor) StartProcessing(ctx context.Context) {
 			p.StopProcessing()
 			return
 		case data := <-p.c:
-			fmt.Printf("[processor][%s] received data: %v\n", p.processorKey, data)
+			p.Work(ctx, data)
 			return
 		}
 
 	}
 }
 
+func (p *KeySpecificDataProcessor) Work(ctx context.Context, data DataWithKey) {
+	fmt.Printf("[processor][%s] received data: %v\n", p.processorKey, data)
+
+}
+
 func (p *KeySpecificDataProcessor) StopProcessing() {
-	// TODO send signal to current task to stop via ctx
 	close(p.c)
+	p.abortC()
 }
 
 func CreateAndStart(ctx context.Context, processorKey string) *KeySpecificDataProcessor {
@@ -50,7 +59,13 @@ func CreateAndStart(ctx context.Context, processorKey string) *KeySpecificDataPr
 		c:            make(chan DataWithKey),
 	}
 
-	go p.StartProcessing(ctx)
+	// can now pass in context from above to worker
+	// this is safe as StartProcessing is called on init
+	abortableCtx, cancel := context.WithCancel(ctx)
+
+	// and call p.abortC to ensure it cleanups
+	p.abortC = cancel
+	go p.StartProcessing(abortableCtx)
 
 	return &p
 }

@@ -46,6 +46,7 @@ func (p *BackgroundDataProcessor) Execute(ctx context.Context) {
 		select {
 		case <-ctx.Done():
 			fmt.Println("[background] context timeout exceeded")
+			close(p.c)
 			return
 		case data := <-p.c:
 			fmt.Printf("[background] received data: %v\n", data)
