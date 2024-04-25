@@ -3,7 +3,7 @@ package main
 import (
 	"fmt"
 
-	"github.com/oneeyedsunday/go_playground/dotnet_channels_process/data"
+	"github.com/oneeyedsunday/go_playground/dotnet_channels_process/pkg/data"
 )
 
 func main() {
@@ -11,6 +11,8 @@ func main() {
 	// eventually use a cmd/background run
 
 	c := make(chan data.DataWithKey)
+
+	fmt.Println(len(c))
 
 	// dataProcessor := data.NewDataProcessor()
 	// should be an error here
