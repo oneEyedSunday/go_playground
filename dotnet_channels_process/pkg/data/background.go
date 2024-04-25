@@ -19,10 +19,6 @@ func NewDataProcessor() *BackgroundDataProcessor {
 	}
 }
 
-func (d *BackgroundDataProcessor) write(data DataWithKey) {
-	d.c <- data
-}
-
 // GetOrCreateDataProcessor is a threadsafe method that either returns or create a processor based on the specified key
 func (p *BackgroundDataProcessor) GetOrCreateDataProcessor(ctx context.Context, key string) *KeySpecificDataProcessor {
 	// should lock this here
@@ -37,36 +33,26 @@ func (p *BackgroundDataProcessor) GetOrCreateDataProcessor(ctx context.Context, 
 	return p.p[key]
 }
 
+// Push receives data into the backlog, internally it has a buffer to hold data, it should ideally be called in a goroutine to avoid blocking on congestion
+func (p *BackgroundDataProcessor) Push(entry DataWithKey) {
+	// fmt.Printf("before pushing size: %v and cap %v\n", len(p.c), cap(p.c))
+	p.c <- entry
+	// fmt.Printf("after pushing size: %v and cap %v\n", len(p.c), cap(p.c))
+}
+
 func (p *BackgroundDataProcessor) Execute(ctx context.Context) {
+	fmt.Println("executing background consumer")
 	for {
 		select {
 		case <-ctx.Done():
 			fmt.Println("[background] context timeout exceeded")
 			return
 		case data := <-p.c:
-			fmt.Printf("received data: %v\n", data)
+			fmt.Printf("[background] received data: %v\n", data)
+			fmt.Printf("after receiving size: %v and cap %v\n", len(p.c), cap(p.c))
 			processor := p.GetOrCreateDataProcessor(ctx, data.Key)
-			processor.Schedule(data)
-			return
+			go processor.Schedule(data)
 		}
 
 	}
 }
-
-// func (d *DataProcessor) Schedule(f data.DataWithKey) chan DataWithKey {
-// 	d.write(f)
-
-// 	return d.c
-// }
-
-// func (d *DataProcessor) ReadAndFn(fn func(item data.DataWithKey) error) {
-// 	for {
-// 		entry := <-d.c
-// 		processor := d.GetOrCreateDataProcessor(entry.Key)
-// 		fmt.Printf("Processor found: %v \n", processor)
-// 		// err := processor(data)
-// 		// if err != nil {
-// 		// 	fmt.Printf("error handling data %s\n", err.Error())
-// 		// }
-// 	}
-// }

@@ -28,10 +28,11 @@ func (p *KeySpecificDataProcessor) StartProcessing(ctx context.Context) {
 	for {
 		select {
 		case <-ctx.Done():
-			fmt.Println("[processor] context timeout exceeded")
+			fmt.Printf("[processor][%s] context timeout exceeded\n", p.processorKey)
+			p.StopProcessing()
 			return
 		case data := <-p.c:
-			fmt.Printf("received data: %v\n", data)
+			fmt.Printf("[processor][%s] received data: %v\n", p.processorKey, data)
 			return
 		}
 
@@ -49,7 +50,7 @@ func CreateAndStart(ctx context.Context, processorKey string) *KeySpecificDataPr
 		c:            make(chan DataWithKey),
 	}
 
-	p.StartProcessing(ctx)
+	go p.StartProcessing(ctx)
 
 	return &p
 }
