@@ -5,9 +5,18 @@ import (
 	"fmt"
 )
 
+type KeySpecificDataProcessor struct {
+	processorKey string
+	c            chan DataWithKey
+}
+
+func (p *KeySpecificDataProcessor) GetProcessorKey() string {
+	return p.processorKey
+}
+
 func (p *KeySpecificDataProcessor) Schedule(d DataWithKey) {
-	if d.Key != p.ProcessorKey {
-		panic(fmt.Sprintf("Data with key %s scheduled for KeySpecificDataProcessor with key %s", d.Key, p.ProcessorKey))
+	if d.Key != p.processorKey {
+		panic(fmt.Sprintf("Data with key %s scheduled for KeySpecificDataProcessor with key %s", d.Key, p.processorKey))
 	}
 
 	p.c <- d
@@ -36,7 +45,7 @@ func (p *KeySpecificDataProcessor) StopProcessing() {
 
 func CreateAndStart(ctx context.Context, processorKey string) *KeySpecificDataProcessor {
 	p := KeySpecificDataProcessor{
-		ProcessorKey: processorKey,
+		processorKey: processorKey,
 		c:            make(chan DataWithKey),
 	}
 
@@ -44,3 +53,5 @@ func CreateAndStart(ctx context.Context, processorKey string) *KeySpecificDataPr
 
 	return &p
 }
+
+var _ IDataProcessor = (*KeySpecificDataProcessor)(nil)
