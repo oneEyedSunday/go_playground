@@ -28,7 +28,7 @@ func (p *KeySpecificDataProcessor) StartProcessing(ctx context.Context) {
 	for {
 		select {
 		case <-ctx.Done():
-			fmt.Println("context timeout exceeded")
+			fmt.Println("[processor] context timeout exceeded")
 			return
 		case data := <-p.c:
 			fmt.Printf("received data: %v\n", data)

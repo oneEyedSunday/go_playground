@@ -2,6 +2,7 @@ package data
 
 import (
 	"context"
+	"fmt"
 	"sync"
 )
 
@@ -22,17 +23,34 @@ func (d *BackgroundDataProcessor) write(data DataWithKey) {
 	d.c <- data
 }
 
-func (p *BackgroundDataProcessor) GetOrCreateDataProcessor(key string) *KeySpecificDataProcessor {
+// GetOrCreateDataProcessor is a threadsafe method that either returns or create a processor based on the specified key
+func (p *BackgroundDataProcessor) GetOrCreateDataProcessor(ctx context.Context, key string) *KeySpecificDataProcessor {
 	// should lock this here
 	// to guard against unsynchronized concurrent access
 	p.mu.Lock()
 	defer p.mu.Unlock()
 
 	if _, exists := p.p[key]; !exists {
-		p.p[key] = CreateAndStart(context.TODO(), key)
+		p.p[key] = CreateAndStart(ctx, key)
 	}
 
 	return p.p[key]
+}
+
+func (p *BackgroundDataProcessor) Execute(ctx context.Context) {
+	for {
+		select {
+		case <-ctx.Done():
+			fmt.Println("[background] context timeout exceeded")
+			return
+		case data := <-p.c:
+			fmt.Printf("received data: %v\n", data)
+			processor := p.GetOrCreateDataProcessor(ctx, data.Key)
+			processor.Schedule(data)
+			return
+		}
+
+	}
 }
 
 // func (d *DataProcessor) Schedule(f data.DataWithKey) chan DataWithKey {
