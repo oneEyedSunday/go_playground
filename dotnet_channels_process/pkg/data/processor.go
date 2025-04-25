@@ -3,6 +3,7 @@ package data
 import (
 	"context"
 	"fmt"
+	"time"
 )
 
 type KeySpecificDataProcessor struct {
@@ -11,11 +12,19 @@ type KeySpecificDataProcessor struct {
 	c chan DataWithKey
 	// abortC is a cancel function that is used internally to signal to the work functions to abort processing
 	// abortC blends both the context of CreateAndStart with a cancel function that is run on `StopProcessing`
-	abortC context.CancelFunc
+	abortC                      context.CancelFunc
+	processingFinishedTimestamp time.Time
 }
 
 func (p *KeySpecificDataProcessor) GetProcessorKey() string {
 	return p.processorKey
+}
+
+func (p *KeySpecificDataProcessor) LastProcessingTimestamp() time.Time {
+	if !p.processingFinishedTimestamp.IsZero() {
+		return p.processingFinishedTimestamp
+	}
+	return time.Now().UTC()
 }
 
 func (p *KeySpecificDataProcessor) Schedule(d DataWithKey) {
@@ -36,6 +45,7 @@ func (p *KeySpecificDataProcessor) StartProcessing(ctx context.Context) {
 			p.StopProcessing()
 			return
 		case data := <-p.c:
+			p.processingFinishedTimestamp = time.Now().UTC()
 			p.Work(ctx, data)
 			return
 		}
@@ -49,7 +59,11 @@ func (p *KeySpecificDataProcessor) Work(ctx context.Context, data DataWithKey) {
 }
 
 func (p *KeySpecificDataProcessor) StopProcessing() {
-	close(p.c)
+	// close(p.c)
+	// do not receive any more work
+	p.c = nil
+	// but do not close since the pump may continue to push work in
+	// close(p.c)
 	p.abortC()
 }
 
