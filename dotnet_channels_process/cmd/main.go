@@ -21,8 +21,8 @@ func pumpData(ctx context.Context, dataProcessor *data.BackgroundDataProcessor) 
 	// push data immediately
 	// because Push will block till its read
 	// You need to go this, else Execute wont be called
-	go dataProcessor.Push(data.DataWithKey{})
-	go dataProcessor.Push(data.DataWithKey{})
+	go dataProcessor.Push(data.DataWithKey{Key: "base"})
+	go dataProcessor.Push(data.DataWithKey{Key: "___"})
 
 	go func() {
 		// push data after 400 millisecond sor abort if cancelled before that
@@ -50,6 +50,12 @@ func pumpData(ctx context.Context, dataProcessor *data.BackgroundDataProcessor) 
 			go dataProcessor.Push(data.DataWithKey{})
 			fmt.Println("After pushing")
 		}
+	}()
+
+	go func() {
+		defer threeSecondsInterval.Stop()
+		defer twoSecondsInterval.Stop()
+		<-ctx.Done()
 	}()
 
 	func() {

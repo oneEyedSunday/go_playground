@@ -3,6 +3,8 @@ package data
 import (
 	"context"
 	"fmt"
+	"log"
+	"os"
 	"sync"
 )
 
@@ -42,12 +44,16 @@ func (p *BackgroundDataProcessor) Push(entry DataWithKey) {
 
 func (p *BackgroundDataProcessor) Execute(ctx context.Context) {
 	fmt.Println("executing background consumer")
+	monitor := CreateAndStartMonitor(ctx, p.p, log.New(os.Stderr, "monitor: ", log.LstdFlags|log.Lmicroseconds))
+fetch:
 	for {
 		select {
 		case <-ctx.Done():
 			fmt.Println("[background] context timeout exceeded")
+			// Here we are done done. since the pumps share a similar context
+			// we want to panic if anyone tries to send more data after this
 			close(p.c)
-			return
+			break fetch // break out of loop when context done or whatever
 		case data := <-p.c:
 			fmt.Printf("[background] received data: %v\n", data)
 			fmt.Printf("after receiving size: %v and cap %v\n", len(p.c), cap(p.c))
@@ -56,4 +62,6 @@ func (p *BackgroundDataProcessor) Execute(ctx context.Context) {
 		}
 
 	}
+
+	monitor.StopMonitoring()
 }
