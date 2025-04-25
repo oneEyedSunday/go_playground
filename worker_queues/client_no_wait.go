@@ -69,7 +69,9 @@ func (w *Worker) Start() {
 				fmt.Printf("worker%d: Received work request, delaying for %f seconds\n", w.ID, task.Delay.Seconds())
 
 				// time.Sleep(work.Delay)
-				<-time.NewTicker(task.Delay).C
+				ticker := time.NewTicker(task.Delay)
+				defer ticker.Stop()
+				<-ticker.C
 				// simulate actual work
 				fmt.Printf("worker%d: Hello, %s!\n", w.ID, task.Nome)
 				// can stop here on certain conditions
@@ -125,6 +127,7 @@ func Collector(w http.ResponseWriter, r *http.Request) {
 func StartDispatcher(nWorkers int) {
 	// First, initialize the channel we are going to but the workers' work channels into.
 	WorkerQueue = make(chan chan WorkRequest, nWorkers)
+	limiter := make(chan struct{}, nWorkers*8)
 	for i := 0; i < nWorkers; i++ {
 		fmt.Println("Starting worker", i+1)
 		worker := NewWorker(i+1, WorkerQueue)
@@ -132,10 +135,12 @@ func StartDispatcher(nWorkers int) {
 	}
 
 	go func() {
+		// This (ranging over WorkQueue) is buffered so we are ok, no need for external limiter
 		for work := range WorkQueue {
 			fmt.Println("Received work requeust")
-			// TODO add a limiter for this
+			limiter <- struct{}{} // limit work execution to number of Workers
 			go func(work WorkRequest) {
+				defer func() { <-limiter }()
 				worker := <-WorkerQueue
 
 				fmt.Println("Dispatching work request")
